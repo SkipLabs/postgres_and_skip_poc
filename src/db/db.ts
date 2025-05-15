@@ -1,6 +1,7 @@
 import { Pool } from 'pg';
 import type { Post, PostCreate, User } from './models.js';
 import { NotFoundError, InternalError } from '../errors.js';
+import { PostgresExternalService } from '@skip-adapter/postgres';
 
 const dbConfig = {
   user: 'skipper',
@@ -10,6 +11,8 @@ const dbConfig = {
   port: 5432,
 };
 const pool = new Pool(dbConfig);
+
+export const postgresExternalService = new PostgresExternalService(dbConfig);
 
 export async function getUsers(): Promise<User[]> {
   const result = await pool.query('SELECT * FROM users');

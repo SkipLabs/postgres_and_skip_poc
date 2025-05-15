@@ -10,9 +10,11 @@ import {
 } from './db/db.js';
 import { APIError } from './errors.js';
 import { PostCreate } from './db/models.js';
+import { server, serviceBroker } from './skipservice.js';
 
 const app = express();
 const port = 3000;
+const SKIP_READ_URL = process.env.SKIP_READ_URL || 'http://localhost:8080';
 
 const asyncHandler =
   (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<any>) =>
@@ -57,6 +59,23 @@ app.post(
       status,
     });
     res.json(post);
+  })
+);
+
+app.get(
+  '/streams/posts/:uid',
+  asyncHandler(async (req, res) => {
+    const uid = Number(req.params.uid);
+    const uuid = await serviceBroker.getStreamUUID('posts', uid);
+    res.redirect(307, `${SKIP_READ_URL}/v1/streams/${uuid}`);
+  })
+);
+
+app.get(
+  '/streams/posts',
+  asyncHandler(async (req, res) => {
+    const uuid = await serviceBroker.getStreamUUID('posts');
+    res.redirect(307, `${SKIP_READ_URL}/v1/streams/${uuid}`);
   })
 );
 
@@ -112,6 +131,18 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
   }
 });
 
-app.listen(port, () => {
+const webServer = app.listen(port, () => {
   console.log(`Server running at http://localhost:${port}`);
 });
+
+// Graceful shutdown handler for:
+// - SIGINT: Ctrl+C in terminal
+// - SIGTERM: System termination requests (kill command, container orchestration, etc.)
+['SIGTERM', 'SIGINT'].forEach((sig) =>
+  process.on(sig, async () => {
+    await server.close();
+    webServer.close(() => {
+      console.log('\nServers shut down.');
+    });
+  })
+);

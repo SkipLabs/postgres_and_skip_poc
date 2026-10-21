@@ -52,8 +52,8 @@ app.get(
 
 app.post(
   '/posts',
-  asyncHandler(async (req, res) => {
-    const { title, content, author_id, status } = req.body as PostCreate;
+  asyncHandler(async (req: express.Request<object, unknown, PostCreate>, res) => {
+    const { title, content, author_id, status } = req.body;
     const post = await createPost({
       title,
       content,

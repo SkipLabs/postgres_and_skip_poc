@@ -15,7 +15,7 @@ const pool = new Pool(dbConfig);
 export const postgresExternalService = new PostgresExternalService(dbConfig);
 
 export async function getUsers(): Promise<User[]> {
-  const result = await pool.query('SELECT * FROM users');
+  const result = await pool.query<User>('SELECT * FROM users');
   if (!Array.isArray(result.rows)) {
     throw new InternalError('Database returned invalid user data');
   }
@@ -26,7 +26,7 @@ export async function getUserById(id: string): Promise<User> {
   if (!/^\d+$/.test(id)) {
     throw new InternalError('Invalid user ID format');
   }
-  const result = await pool.query('SELECT * FROM users WHERE id = $1', [id]);
+  const result = await pool.query<User>('SELECT * FROM users WHERE id = $1', [id]);
   if (!result.rows[0]) {
     throw new NotFoundError(`User not found: ${id}`);
   }
@@ -38,7 +38,7 @@ export async function getPostById(id: string): Promise<Post> {
   if (!/^\d+$/.test(id)) {
     throw new InternalError('Invalid post ID format');
   }
-  const result = await pool.query('SELECT * FROM posts WHERE id = $1', [id]);
+  const result = await pool.query<Post>('SELECT * FROM posts WHERE id = $1', [id]);
   if (!result.rows[0]) {
     throw new NotFoundError(`Post not found: ${id}`);
   }
@@ -46,7 +46,7 @@ export async function getPostById(id: string): Promise<Post> {
 }
 
 export async function createPost(post: PostCreate): Promise<Post> {
-  const result = await pool.query(
+  const result = await pool.query<Post>(
     'INSERT INTO posts (title, content, author_id, status) VALUES ($1, $2, $3, $4) RETURNING *',
     [post.title, post.content, post.author_id, post.status]
   );
@@ -56,7 +56,7 @@ export async function createPost(post: PostCreate): Promise<Post> {
 export async function publishPost(id: string): Promise<Post> {
   const publishedAt = new Date().toISOString();
   const updatedAt = new Date().toISOString();
-  const result = await pool.query(
+  const result = await pool.query<Post>(
     'UPDATE posts SET status = $1, published_at = $2, updated_at = $3 WHERE id = $4 RETURNING *',
     ['published', publishedAt, updatedAt, id]
   );
@@ -65,7 +65,7 @@ export async function publishPost(id: string): Promise<Post> {
 
 export async function unpublishPost(id: string): Promise<Post> {
   const updatedAt = new Date().toISOString();
-  const result = await pool.query(
+  const result = await pool.query<Post>(
     'UPDATE posts SET status = $1, published_at = NULL, updated_at = $2 WHERE id = $3 RETURNING *',
     ['draft', updatedAt, id]
   );

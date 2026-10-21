@@ -8,11 +8,12 @@ import {
   publishPost,
   unpublishPost,
 } from './db/db.js';
-import { APIError } from './errors.js';
+import { APIError, BadRequestError } from './errors.js';
 import { PostCreate } from './db/models.js';
 import { server, serviceBroker } from './skipservice.js';
 
 const app = express();
+app.use(express.json());
 const port = 3000;
 const SKIP_READ_URL = process.env.SKIP_READ_URL || 'http://localhost:8080';
 
@@ -21,6 +22,20 @@ const asyncHandler =
   (req: express.Request, res: express.Response, next: express.NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
+
+const requireJsonObjectBody: express.RequestHandler = (req, res, next) => {
+  if (typeof req.body !== 'object' || req.body === null || Array.isArray(req.body)) {
+    next(new BadRequestError('Expected a JSON object body (Content-Type: application/json)'));
+    return;
+  }
+  next();
+};
+
+// Errors from express.json() (malformed JSON, oversized body, ...) carry a 4xx status.
+const isClientHttpError = (err: Error): err is Error & { status: number } => {
+  const status = (err as Error & { status?: unknown }).status;
+  return typeof status === 'number' && status >= 400 && status < 500;
+};
 
 app.get(
   '/users',
@@ -50,6 +65,7 @@ app.get(
 
 app.post(
   '/posts',
+  requireJsonObjectBody,
   asyncHandler(async (req, res) => {
     const { title, content, author_id, status }: PostCreate = req.body;
     const post = await createPost({
@@ -120,6 +136,12 @@ app.use((err: Error, req: express.Request, res: express.Response, next: express.
     res.status(err.statusCode).json({
       error: err.name,
       statusCode: err.statusCode,
+      details: err.message,
+    });
+  } else if (isClientHttpError(err)) {
+    res.status(err.status).json({
+      error: err.name,
+      statusCode: err.status,
       details: err.message,
     });
   } else {

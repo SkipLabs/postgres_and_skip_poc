@@ -15,6 +15,12 @@ export class NotFoundError extends APIError {
   }
 }
 
+export class BadRequestError extends APIError {
+  constructor(message: string) {
+    super(400, message);
+  }
+}
+
 export class InternalError extends APIError {
   constructor(message: string) {
     super(500, message);

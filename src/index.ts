@@ -17,7 +17,9 @@ const port = 3000;
 const SKIP_READ_URL = process.env.SKIP_READ_URL || 'http://localhost:8080';
 
 const asyncHandler =
-  (fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<any>) =>
+  (
+    fn: (req: express.Request, res: express.Response, next: express.NextFunction) => Promise<void>
+  ) =>
   (req: express.Request, res: express.Response, next: express.NextFunction) => {
     Promise.resolve(fn(req, res, next)).catch(next);
   };
@@ -51,7 +53,7 @@ app.get(
 app.post(
   '/posts',
   asyncHandler(async (req, res) => {
-    const { title, content, author_id, status }: PostCreate = req.body;
+    const { title, content, author_id, status } = req.body as PostCreate;
     const post = await createPost({
       title,
       content,
@@ -115,7 +117,7 @@ The thing you asked for isn't here.
 `);
 });
 
-app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
+app.use((err: Error, req: express.Request, res: express.Response, _next: express.NextFunction) => {
   if (err instanceof APIError) {
     res.status(err.statusCode).json({
       error: err.name,
@@ -138,11 +140,10 @@ const webServer = app.listen(port, () => {
 // Graceful shutdown handler for:
 // - SIGINT: Ctrl+C in terminal
 // - SIGTERM: System termination requests (kill command, container orchestration, etc.)
-['SIGTERM', 'SIGINT'].forEach((sig) =>
-  process.on(sig, async () => {
-    await server.close();
-    webServer.close(() => {
-      console.log('\nServers shut down.');
-    });
-  })
-);
+const shutdown = async () => {
+  await server.close();
+  webServer.close(() => {
+    console.log('\nServers shut down.');
+  });
+};
+['SIGTERM', 'SIGINT'].forEach((sig) => process.on(sig, () => void shutdown()));

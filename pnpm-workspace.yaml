@@ -1,4 +1,4 @@
 onlyBuiltDependencies:
   - '@skipruntime/native'
 overrides:
-  minimatch: 11.0.5
+  minimatch: 11.0.9
